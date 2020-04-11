@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { UserRepository } from './user.repository';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
+import { ChangePasswordDto } from './dto';
+import { User } from './entities/User.entity';
 
 @Injectable()
 export class AuthService {
@@ -11,11 +13,11 @@ export class AuthService {
   constructor(
     @InjectRepository(UserRepository)
     private readonly userRepository: UserRepository,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
   ) {
   }
 
-  async getAllUsers(req: any) : Promise<any> {
+  async getAllUsers(req: any): Promise<any> {
     return this.userRepository.getAllUsers();
   }
 
@@ -62,14 +64,14 @@ export class AuthService {
         success: false,
         message: 'Error',
         data: {
-          email: 'user already exists, Please login'
-        }
-      }
+          email: 'user already exists, Please login',
+        },
+      };
     } catch (e) {
       return {
         success: false,
-        message : 'Something Went wrong ... Registration Failed'
-      }
+        message: 'Something Went wrong ... Registration Failed',
+      };
     }
   }
 
@@ -92,13 +94,44 @@ export class AuthService {
     }
   }
 
-async login(user: any, body: any) {
-    const {email, id} = user;
-    const payload = {email, id};
+  async login(user: any, body: any) {
+    const { email, id } = user;
+    const payload = { email, id };
     return {
       success: true,
       // eslint-disable-next-line @typescript-eslint/camelcase
-      access_token: this.jwtService.sign(payload)
+      access_token: this.jwtService.sign(payload),
+    };
+  }
+
+  async changePassword(user: User, data: ChangePasswordDto): Promise<any> {
+    const id = user.id;
+    const found = await this.userRepository.findOne({id});
+    const match = await bcrypt.compare(data.currentPassword
+     , found.password);
+    if(!match) {
+      return {
+        success: false,
+        message: 'Error',
+        data: {
+          confirmPassword: 'Current Password is incorrect'
+        },
+      }
     }
-}
+    if(data.password === data.confirmPassword){
+      user.password = await bcrypt.hash(data.password, 10);
+      await this.userRepository.save(user);
+      return {
+        success: true,
+        message: 'Success'
+      };
+    }
+    return {
+      success: false,
+    message: 'Error',
+      data: {
+        confirmPassword: 'Password and confirm Password must be same'
+      },
+    };
+  }
 }

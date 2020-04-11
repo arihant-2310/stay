@@ -1,7 +1,7 @@
-import { Body, Controller, Get, Request, Logger, Post, UseGuards } from '@nestjs/common';
-import {ApiBearerAuth, ApiUseTags} from '@nestjs/swagger';
+import { Body, Controller, Get, Request, Logger, Post, UseGuards, Put } from '@nestjs/common';
+import { ApiBearerAuth, ApiUseTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto } from './dto';
+import { ChangePasswordDto, LoginDto, RegisterDto } from './dto';
 import { AuthGuard } from '@nestjs/passport';
 
 
@@ -9,6 +9,7 @@ import { AuthGuard } from '@nestjs/passport';
 @Controller('api/v1/auth')
 export class AuthController {
   private logger = new Logger('Auth Controller');
+
   constructor(private readonly authService: AuthService) {
   }
 
@@ -37,10 +38,15 @@ export class AuthController {
 
 
   @Post('register')
-  register(@Body() registerDto: RegisterDto):Promise<any>{
+  register(@Body() registerDto: RegisterDto): Promise<any> {
     this.logger.verbose('New user Created');
     return this.authService.register(registerDto);
   }
 
+  @UseGuards(AuthGuard('jwt'))
+  @Put('change-password')
+  changePassword(@Request() req: any, @Body() body: ChangePasswordDto) {
+    return this.authService.changePassword(req.user, body);
+  }
 
 }
